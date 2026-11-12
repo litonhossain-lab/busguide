@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}</style>
+<title>ঢাকা বাস গাইড</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@600;800&family=Hind+Siliguri:wght@400;500;600&display=swap">
+<style>
+/* Layout: mode tabs on top; one working column on phones (location -> trip -> ticket -> fare check); controls left, ticket/list/map right from 880px. */
+:root{
+  --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#E4EBE5; --ink:#14231C; --muted:#52645A; --line:#CBD6CE;
+  --brand:#0F6B4B; --on-brand:#FFFFFF; --signal:#C81E32; --ok:#0F6B4B;
+  --ticket:#FFF1BF; --ticket-ink:#2B2200; --ticket-line:#C9A93A;
+  --font-display:"Baloo Da 2","Hind Siliguri","Noto Sans Bengali","Segoe UI",system-ui,sans-serif;
+  --font-body:"Hind Siliguri","Noto Sans Bengali","Segoe UI",system-ui,sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1612; --surface:#15211B; --surface-2:#1C2B24; --ink:#E6EEE8; --muted:#9DB0A5; --line:#263830;
+    --brand:#3DBE8C; --on-brand:#04150E; --signal:#FF7684; --ok:#3DBE8C;
+    --ticket:#2D2811; --ticket-ink:#F6E8A8; --ticket-line:#7A6A24; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1612; --surface:#15211B; --surface-2:#1C2B24; --ink:#E6EEE8; --muted:#9DB0A5; --line:#263830;
+  --brand:#3DBE8C; --on-brand:#04150E; --signal:#FF7684; --ok:#3DBE8C;
+  --ticket:#2D2811; --ticket-ink:#F6E8A8; --ticket-line:#7A6A24; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:16px; line-height:1.55;
+  padding-block:20px 40px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap{max-width:1000px; margin:0 auto; display:grid; gap:16px}
+header{display:flex; gap:12px; align-items:center}
+.mark{flex:none; width:44px; height:44px; border-radius:var(--r); background:var(--brand); color:var(--on-brand); display:grid; place-items:center}
+h1{font-family:var(--font-display); font-weight:800; font-size:1.7rem; line-height:1.15; margin:0; text-wrap:balance}
+header p{margin:2px 0 0; color:var(--muted); font-size:.95rem}
+.cols{display:grid; gap:16px; grid-template-columns:minmax(0,1fr); align-items:start}
+@media (min-width:880px){ .cols{grid-template-columns:minmax(0,5fr) minmax(0,6fr)} }
+.stack{display:grid; gap:16px; min-width:0}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px; min-width:0}
+h2{font-family:var(--font-display); font-weight:600; font-size:1.15rem; line-height:1.3; margin:0 0 10px; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
+h2 .step{font-size:.8rem; letter-spacing:.04em; color:var(--muted); font-weight:600; font-family:var(--font-body)}
+label,.lbl{display:block; font-size:.9rem; font-weight:500; color:var(--muted); margin-bottom:4px}
+select,input[type=number]{
+  width:100%; font:inherit; color:var(--ink); background:var(--surface-2); border:1px solid var(--line);
+  border-radius:8px; padding:10px 12px; min-height:44px;
+}
+button{font:inherit; cursor:pointer}
+:focus-visible{outline:3px solid var(--brand); outline-offset:2px}
+.btn{
+  width:100%; min-height:48px; border:0; border-radius:8px; background:var(--brand); color:var(--on-brand);
+  font-weight:600; display:flex; gap:8px; align-items:center; justify-content:center; padding:10px 14px;
+}
+.btn:disabled{opacity:.7; cursor:wait}
+.field{margin-top:12px}
+.or{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:.85rem; margin:12px 0 0}
+.or::before,.or::after{content:""; flex:1; height:1px; background:var(--line)}
+.msg{margin:10px 0 0; font-size:.92rem; color:var(--muted)}
+.msg.warn{color:var(--signal)}
+.seg{display:grid; grid-template-columns:1fr 1fr; gap:6px; background:var(--surface-2); padding:4px; border-radius:10px}
+.seg.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg button{border:0; background:transparent; color:var(--ink); border-radius:7px; padding:9px 6px; min-height:44px; font-weight:500; line-height:1.25}
+.seg button[aria-pressed="true"]{background:var(--brand); color:var(--on-brand); font-weight:600}
+.modebar{position:sticky; top:env(safe-area-inset-top, 0px); z-index:5; background:var(--bg); padding-block:4px}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--bg)}
+details{margin-top:14px; border-top:1px solid var(--line); padding-top:10px}
+summary{cursor:pointer; font-weight:500; color:var(--muted); min-height:32px}
+.set-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-top:10px}
+.linkbtn{background:none; border:0; color:var(--brand); text-decoration:underline; padding:6px 0; font-weight:500}
+.swaprow{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:8px; align-items:end}
+.swap{min-height:44px; min-width:44px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink); border-radius:8px; font-weight:600}
+
+/* Ticket */
+.ticket{position:relative; background:var(--ticket); color:var(--ticket-ink); border-radius:var(--r); border:1px solid var(--ticket-line); min-width:0}
+.t-top{padding:16px 16px 14px}
+.t-route{font-family:var(--font-display); font-weight:600; font-size:1.2rem; line-height:1.3; display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center}
+.t-route .arr{opacity:.7}
+.t-sub{font-size:.9rem; opacity:.85; margin-top:2px}
+.perf{position:relative; height:0; border-top:2px dashed var(--ticket-line); margin:0 14px}
+.perf::before,.perf::after{content:""; position:absolute; top:-12px; width:22px; height:22px; border-radius:50%; background:var(--bg); border:1px solid var(--ticket-line)}
+.perf::before{left:-26px; clip-path:inset(0 0 0 50%)}
+.perf::after{right:-26px; clip-path:inset(0 50% 0 0)}
+.t-bot{padding:14px 16px 16px; display:grid; gap:12px}
+.fare{font-family:var(--font-display); font-weight:800; font-size:3rem; line-height:1; font-variant-numeric:tabular-nums}
+.fare small{font-size:1.2rem; font-weight:600; margin-right:2px}
+.calc{font-size:.92rem; opacity:.9; font-variant-numeric:tabular-nums}
+.facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px}
+.fact{border-top:1px solid var(--ticket-line); padding-top:6px; min-width:0}
+.fact b{display:block; font-family:var(--font-display); font-size:1.1rem; font-weight:600; line-height:1.3}
+.fact span{font-size:.82rem; opacity:.85}
+.tag{display:inline-block; font-size:.8rem; font-weight:600; padding:2px 8px; border-radius:99px; border:1px solid var(--ticket-line)}
+
+/* Terminals, stops, operators */
+.tlist{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+.tlist li{display:flex; gap:10px; align-items:flex-start; justify-content:space-between; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-2)}
+.tlist li.near{border-color:var(--brand); box-shadow:inset 3px 0 0 var(--brand)}
+.tlist li.on{border-color:var(--ink)}
+.tlist .nm{font-weight:600}
+.tlist .ar{font-size:.85rem; color:var(--muted)}
+.tlist .dk{white-space:nowrap; font-weight:600; font-variant-numeric:tabular-nums; text-align:right}
+.tlist .dk small{display:block; font-weight:400; color:var(--muted); font-size:.78rem}
+.bd{display:inline-block; font-size:.75rem; font-weight:600; padding:0 8px; border-radius:99px; margin-left:6px; background:var(--brand); color:var(--on-brand); vertical-align:1px}
+.bd.alt{background:var(--ink); color:var(--surface)}
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0; list-style:none}
+.chips li{background:var(--surface-2); border:1px solid var(--line); border-radius:99px; padding:3px 10px; font-size:.9rem}
+.sub{font-size:.9rem; color:var(--muted); margin:10px 0 6px; font-weight:500}
+
+/* Map */
+.map{width:100%; max-width:100%; height:auto; display:block; border-radius:8px; background:var(--surface-2)}
+.map text{font-family:var(--font-body); font-size:11px; fill:var(--ink)}
+.map .dim{fill:var(--muted)}
+.map .grid{stroke:var(--line); stroke-width:1}
+.legend{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.82rem; color:var(--muted); margin-top:8px}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+
+/* Overcharge check */
+.verdict{margin-top:10px; padding:10px 12px; border-radius:8px; font-weight:500; border:1px solid var(--line); background:var(--surface-2)}
+.verdict.bad{border-color:var(--signal); color:var(--signal)}
+.verdict.good{border-color:var(--ok); color:var(--ok)}
+.verdict small{display:block; font-weight:400; color:var(--muted); margin-top:2px}
+
+/* Table */
+.scroll{overflow-x:auto}
+table{border-collapse:collapse; width:100%; min-width:420px; font-variant-numeric:tabular-nums}
+th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap}
+td.wrapc{white-space:normal; min-width:200px}
+th{font-size:.82rem; color:var(--muted); font-weight:600}
+td.num,th.num{text-align:right}
+tr.on td{background:var(--surface-2)}
+td button{background:none; border:0; color:var(--brand); font-weight:600; padding:4px 0; text-align:left; min-height:32px}
+td .co{display:block; font-size:.8rem; color:var(--muted); font-weight:400}
+.notes{font-size:.88rem; color:var(--muted); display:grid; gap:6px}
+.notes p{margin:0}
+.notes a{color:var(--brand)}
+@media (prefers-reduced-motion:no-preference){ .fare{transition:opacity .2s} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="mark" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="15" rx="3"/><path d="M3 11h18"/><path d="M7 18v2M17 18v2"/><circle cx="7.5" cy="14.5" r=".6" fill="currentColor"/><circle cx="16.5" cy="14.5" r=".6" fill="currentColor"/></svg>
+    </div>
+    <div>
+      <h1>ঢাকা বাস গাইড</h1>
+      <p>আন্তঃজেলা বাস এবং ঢাকা ও চট্টগ্রাম শহরের বাস: কাছের টার্মিনাল বা স্টপ, রুট আর ভাড়া।</p>
+    </div>
+  </header>
+
+  <div class="modebar">
+    <div class="seg three" role="group" aria-label="বাসের ধরন">
+      <button type="button" id="mInter" aria-pressed="true">আন্তঃজেলা</button>
+      <button type="button" id="mDhaka" aria-pressed="false">ঢাকা শহর</button>
+      <button type="button" id="mCtg" aria-pressed="false">চট্টগ্রাম শহর</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="stack">
+      <section class="card" aria-labelledby="h-loc">
+        <h2 id="h-loc"><span class="step">ধাপ ১</span> আপনার অবস্থান</h2>
+        <button class="btn" id="locBtn" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+          আমার লোকেশন চালু করুন
+        </button>
+        <div class="or">অথবা</div>
+        <div class="field" style="margin-top:8px">
+          <label for="area">এলাকা বেছে নিন</label>
+          <select id="area"></select>
+        </div>
+        <p class="msg" id="locMsg" role="status">নমুনা হিসেবে ধানমন্ডি বাছা আছে। লোকেশন চালু করলে আপনার আসল অবস্থান ধরা হবে।</p>
+      </section>
+
+      <section class="card" id="cardInter" aria-labelledby="h-dest">
+        <h2 id="h-dest"><span class="step">ধাপ ২</span> কোথায় যাবেন</h2>
+        <label for="dest">গন্তব্য</label>
+        <select id="dest"></select>
+        <div class="field">
+          <span class="lbl" id="typeLbl">বাসের শ্রেণি</span>
+          <div class="seg" role="group" aria-labelledby="typeLbl">
+            <button type="button" id="tStd" aria-pressed="true">সাধারণ (সরকারি হার)</button>
+            <button type="button" id="tAc" aria-pressed="false">এসি / কোচ</button>
+          </div>
+        </div>
+        <details>
+          <summary>হিসাবের সেটিং (কিমি, হার, গতি)</summary>
+          <div class="set-grid">
+            <div><label for="kmIn">কিমি (নিজে দিন)</label><input id="kmIn" type="number" inputmode="decimal" min="1" step="0.1" placeholder="স্বয়ংক্রিয়"></div>
+            <div><label for="rateIn">সাধারণ হার (টাকা/কিমি)</label><input id="rateIn" type="number" inputmode="decimal" min="0.1" step="0.01"></div>
+            <div><label for="acIn">এসি আনুমানিক (টাকা/কিমি)</label><input id="acIn" type="number" inputmode="decimal" min="0.1" step="0.1"></div>
+            <div><label for="spIn">গড় গতি (কিমি/ঘণ্টা)</label><input id="spIn" type="number" inputmode="decimal" min="10" step="1"></div>
+          </div>
+          <button class="linkbtn" id="resetBtn" type="button">আগের মান ফেরান</button>
+        </details>
+      </section>
+
+      <section class="card" id="cardCity" aria-labelledby="h-trip" hidden>
+        <h2 id="h-trip"><span class="step">ধাপ ২</span> কোন রুটে যাবেন</h2>
+        <label for="route">রুট</label>
+        <select id="route"></select>
+        <div class="field swaprow">
+          <div><label for="from">কোথায় উঠবেন</label><select id="from"></select></div>
+          <button class="swap" id="swap" type="button" aria-label="উঠা ও নামার স্টপ অদলবদল করুন">⇄</button>
+          <div><label for="to">কোথায় নামবেন</label><select id="to"></select></div>
+        </div>
+        <p class="msg" id="tripMsg"></p>
+        <details>
+          <summary>হিসাবের সেটিং (কিমি, হার, গতি)</summary>
+          <div class="set-grid">
+            <div><label for="ckmIn">কিমি (নিজে দিন)</label><input id="ckmIn" type="number" inputmode="decimal" min="0.1" step="0.1" placeholder="স্বয়ংক্রিয়"></div>
+            <div><label for="crateIn">হার (টাকা/কিমি)</label><input id="crateIn" type="number" inputmode="decimal" min="0.1" step="0.01"></div>
+            <div><label for="cminIn">ন্যূনতম ভাড়া (টাকা)</label><input id="cminIn" type="number" inputmode="numeric" min="1" step="1"></div>
+            <div><label for="cspIn">গড় গতি (কিমি/ঘণ্টা)</label><input id="cspIn" type="number" inputmode="decimal" min="3" step="1"></div>
+          </div>
+          <button class="linkbtn" id="cresetBtn" type="button">আগের মান ফেরান</button>
+        </details>
+      </section>
+
+      <section class="card" aria-labelledby="h-chk">
+        <h2 id="h-chk">কন্ডাক্টর কত চাইলেন?</h2>
+        <label for="paid">চাওয়া ভাড়া (টাকা)</label>
+        <input id="paid" type="number" inputmode="numeric" min="0" step="1" placeholder="যেমন ৭০০">
+        <div id="verdict" role="status" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <div class="stack" aria-live="polite">
+      <section class="ticket" id="ticket" aria-label="ভাড়ার হিসাব"></section>
+
+      <section class="card" id="secTerm" aria-labelledby="h-term">
+        <h2 id="h-term">কোথা থেকে উঠবেন</h2>
+        <ul class="tlist" id="tlist"></ul>
+        <div class="sub">এই রুটে সাধারণত চলে</div>
+        <ul class="chips" id="ops"></ul>
+        <p class="msg" id="opsNote"></p>
+      </section>
+
+      <section class="card" id="secStops" aria-labelledby="h-stops" hidden>
+        <h2 id="h-stops">রুটের স্টপ</h2>
+        <ul class="chips" id="cityOps"></ul>
+        <p class="msg" id="routeNote"></p>
+        <div class="sub">স্টপের ক্রম ও উঠার স্টপ থেকে দূরত্ব</div>
+        <ul class="tlist" id="slist"></ul>
+        <button class="linkbtn" id="nearBtn" type="button">নিকটতম স্টপকে উঠার স্টপ ধরুন</button>
+      </section>
+
+      <section class="card" aria-labelledby="h-map">
+        <h2 id="h-map">অবস্থান</h2>
+        <svg class="map" id="map" viewBox="0 0 330 400" role="img" aria-label="টার্মিনাল বা রুটের পরিকল্পিত মানচিত্র"></svg>
+        <div class="legend" id="legend"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="card" id="secAll" aria-labelledby="h-all">
+    <h2 id="h-all">সব রুটের ভাড়া একনজরে</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>গন্তব্য</th><th class="num">কিমি</th><th class="num" id="thFare">ভাড়া (৳)</th><th class="num">সময়</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="secDir" aria-labelledby="h-dir" hidden>
+    <h2 id="h-dir">এই শহরের সব রুট</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>রুট</th><th class="num">স্টপ</th><th class="num">আনুমানিক কিমি</th><th class="num">পুরো রুটের ভাড়া (৳)</th></tr></thead>
+      <tbody id="dirBody"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card notes" id="notesInter">
+    <p><b>ভাড়ার ভিত্তি:</b> সাধারণ আন্তঃজেলা বাসের হার প্রতি কিমি ২.৪০ টাকা (আগে ছিল ২.২৩ টাকা)। ২২ সেপ্টেম্বর ২০২৬ থেকে কার্যকর হওয়া প্রজ্ঞাপন অনুযায়ী। কাউন্টারের চার্ট মিলিয়ে নিন। হার বদলালে উপরের সেটিংয়ে বদলে নিতে পারবেন।</p>
+    <p><b>এসি ও কোচ:</b> এসি বাসের জন্য আলাদা সরকারি হার নেই, কোম্পানিভেদে ভাড়া ভিন্ন। এখানে দেওয়া সংখ্যা শুধু আনুমানিক বাজার ধারণা।</p>
+    <p><b>দূরত্ব ও সময়:</b> কিমি হল ঢাকা থেকে আনুমানিক সড়ক দূরত্ব, সময় গড় গতি ধরে হিসাব করা। যানজট ও যাত্রাবিরতিতে বদলাতে পারে। টার্মিনাল ও বাস কোম্পানির তালিকা সূচক হিসেবে দেওয়া, যাত্রার আগে কাউন্টারে নিশ্চিত হন।</p>
+    <p>সূত্র: <a href="https://unb.com.bd/category/Bangladesh/govt-issues-gazette-raising-bus-minibus-fares-by-tk-017-per-km/196049" target="_blank" rel="noopener">ইউএনবি (প্রজ্ঞাপন)</a>, <a href="https://en.prothomalo.com/bangladesh/k3n86iluhg" target="_blank" rel="noopener">প্রথম আলো (ইংরেজি)</a></p>
+  </section>
+
+  <section class="card notes" id="notesCity" hidden>
+    <p><b>ভাড়ার ভিত্তি:</b> ঢাকা ও চট্টগ্রাম মহানগরের সিটি বাসে প্রতি কিমি ২.৭০ টাকা, ন্যূনতম ১০ টাকা। ২২ সেপ্টেম্বর ২০২৬ থেকে কার্যকর প্রজ্ঞাপন অনুযায়ী। এখানে এসি আর সাধারণ বাসের আলাদা হিসাব নেই।</p>
+    <p><b>কতটা নির্ভুল:</b> স্টপের অবস্থান আর কিমি আমার আনুমানিক হিসাব, সরকারি চার্ট নয়। তাই ভাড়া একটি সীমা (±২০%) হিসেবে দেখানো হয়। বাসে টাঙানো ভাড়ার চার্টই চূড়ান্ত। কিমি জানা থাকলে সেটিংয়ে নিজে বসান, তখন হিসাব সরকারি হারে সরাসরি হবে।</p>
+    <p><b>সরকারি চার্টের কয়েকটি দূরত্ব (বিআরটিএ, এপ্রিল ২০২৬), নতুন হারে ভাড়া:</b> গুলিস্তান–গাজীপুর ৪১.৫ কিমি ≈ ৳১১২; মিরপুর চিড়িয়াখানা–কেরানীগঞ্জ কেন্দ্রীয় কারাগার ২১ কিমি ≈ ৳৫৭; চট্টগ্রামে কালুরঘাট ব্রিজ–নিউমার্কেট ১৪ কিমি ≈ ৳৩৮; নিউমার্কেট–বিমানবন্দর ১৮.৬ কিমি ≈ ৳৫০।</p>
+    <p id="cityNoteSpecific"></p>
+    <p>সূত্র: <a href="https://unb.com.bd/category/Bangladesh/govt-issues-gazette-raising-bus-minibus-fares-by-tk-017-per-km/196049" target="_blank" rel="noopener">ইউএনবি (প্রজ্ঞাপন)</a>, <a href="https://www.prothomalo.com/bangladesh/b5wtxsd7vb" target="_blank" rel="noopener">প্রথম আলো (ভাড়ার তালিকা)</a>, <a href="https://www.dhakatimes24.com/2026/11/01/416257" target="_blank" rel="noopener">ঢাকা টাইমস ২৪</a>, <a href="https://thefinancialexpress.com.bd/national/city-bus-franchise-system-launched-on-seven-routes" target="_blank" rel="noopener">ফিন্যান্সিয়াল এক্সপ্রেস</a>, <a href="https://bangla.thedailystar.net/news/bangladesh/news-3976216" target="_blank" rel="noopener">ডেইলি স্টার বাংলা</a>, <a href="https://www.deshamar.com/2026/07/chittagong-bus-routes-and-direction.html" target="_blank" rel="noopener">দেশ আমার</a></p>
+  </section>
+
+  <section class="card notes">
+    <p><b>এই সংস্করণের সীমা:</b> বাসের চলন্ত অবস্থান দেখাতে প্রতিটি বাসে GPS লাগে, সেই তথ্য এখানে নেই। এখানে আপনার অবস্থান থেকে নিকটতম টার্মিনাল বা স্টপ দেখানো হয়।</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  var DEF = {rate:2.40, ac:4.50, speed:45, crate:2.70, cmin:10, cspeed:14};
+  var S = {mode:'inter', type:'std', rate:DEF.rate, ac:DEF.ac, speed:DEF.speed, crate:DEF.crate, cmin:DEF.cmin, cspeed:DEF.cspeed,
+           user:null, dest:'chattogram', km:null, ckm:null, route:{dhaka:0, ctg:0}, ft:{}, cur:null};
+
+  /* ---------- intercity data ---------- */
+  var T = {
+    gabtoli:{n:'গাবতলী', area:'মিরপুর রোড, আমিনবাজার মুখে (পশ্চিম ও উত্তর-পশ্চিম রুট)', lat:23.7788, lng:90.3438, lx:8, ly:16, a:'start'},
+    kallyanpur:{n:'কল্যাণপুর', area:'মিরপুর রোড, কল্যাণপুর বাস স্ট্যান্ড', lat:23.7843, lng:90.3633, lx:8, ly:-6, a:'start'},
+    mohakhali:{n:'মহাখালী', area:'মহাখালী আন্তঃজেলা বাস টার্মিনাল', lat:23.7782, lng:90.4054, lx:9, ly:4, a:'start'},
+    abdullahpur:{n:'আবদুল্লাপুর', area:'উত্তরা, আবদুল্লাপুর', lat:23.8795, lng:90.4005, lx:9, ly:4, a:'start'},
+    kamalapur:{n:'কমলাপুর', area:'কমলাপুর, রেলস্টেশন সংলগ্ন', lat:23.7270, lng:90.4260, lx:-9, ly:4, a:'end'},
+    sayedabad:{n:'সায়েদাবাদ', area:'সায়েদাবাদ, যাত্রাবাড়ী সংলগ্ন (পূর্ব ও দক্ষিণ রুট)', lat:23.7109, lng:90.4290, lx:-9, ly:14, a:'end'}
+  };
+  var EAST=['sayedabad','kamalapur'], WEST=['gabtoli','kallyanpur'], NORTH=['gabtoli','abdullahpur'];
+  var DEST = [
+    {id:'chattogram', n:'চট্টগ্রাম', km:264, t:EAST, ops:['সৌদিয়া','এস আর ট্রাভেলস','গ্রীন লাইন','হানিফ এন্টারপ্রাইজ','ঈগল পরিবহন']},
+    {id:'coxsbazar', n:'কক্সবাজার', km:392, t:EAST, ops:['গ্রীন লাইন','এস আর ট্রাভেলস','সৌদিয়া','হানিফ এন্টারপ্রাইজ']},
+    {id:'sylhet', n:'সিলেট', km:243, t:EAST, ops:['গ্রীন লাইন','হানিফ এন্টারপ্রাইজ','শ্যামলী পরিবহন']},
+    {id:'cumilla', n:'কুমিল্লা', km:97, t:EAST},
+    {id:'brahmanbaria', n:'ব্রাহ্মণবাড়িয়া', km:118, t:EAST},
+    {id:'feni', n:'ফেনী', km:156, t:EAST},
+    {id:'noakhali', n:'নোয়াখালী', km:168, t:['sayedabad']},
+    {id:'rajshahi', n:'রাজশাহী', km:255, t:WEST, ops:['এনা ট্রান্সপোর্ট','গ্রীন লাইন','শ্যামলী পরিবহন','ন্যাশনাল ট্রাভেলস']},
+    {id:'khulna', n:'খুলনা', km:250, t:WEST, ops:['হানিফ এন্টারপ্রাইজ','শ্যামলী পরিবহন','গ্রীন লাইন']},
+    {id:'jashore', n:'যশোর', km:190, t:WEST, ops:['হানিফ এন্টারপ্রাইজ','শ্যামলী পরিবহন','গ্রীন লাইন']},
+    {id:'barishal', n:'বরিশাল', km:160, t:['gabtoli','sayedabad']},
+    {id:'faridpur', n:'ফরিদপুর', km:105, t:['gabtoli']},
+    {id:'bogura', n:'বগুড়া', km:195, t:NORTH},
+    {id:'rangpur', n:'রংপুর', km:305, t:NORTH},
+    {id:'dinajpur', n:'দিনাজপুর', km:412, t:NORTH},
+    {id:'mymensingh', n:'ময়মনসিংহ', km:120, t:['mohakhali','abdullahpur']},
+    {id:'tangail', n:'টাঙ্গাইল', km:98, t:NORTH}
+  ];
+
+  /* ---------- city data ---------- */
+  var DHAKA_AREAS = [
+    ['uttara','উত্তরা',23.8759,90.3795],['mirpur','মিরপুর-১০',23.8069,90.3685],['gulshan','গুলশান-২',23.7925,90.4078],
+    ['badda','বাড্ডা',23.7806,90.4262],['mohammadpur','মোহাম্মদপুর',23.7662,90.3586],['farmgate','ফার্মগেট',23.7561,90.3872],
+    ['rampura','রামপুরা',23.7612,90.4234],['dhanmondi','ধানমন্ডি',23.7461,90.3742],['motijheel','মতিঝিল',23.7330,90.4172],
+    ['oldDhaka','সদরঘাট, পুরান ঢাকা',23.7104,90.4074],['jatrabari','যাত্রাবাড়ী',23.7104,90.4344],['demra','ডেমরা',23.7167,90.4983]
+  ];
+  var DP = {
+    shib:['শিববাড়ী চৌরাস্তা (গাজীপুর)',23.9820,90.4035], abd:['আবদুল্লাহপুর',23.8795,90.4005], utt:['উত্তরা (জসীমউদদীন)',23.8644,90.3998],
+    air:['বিমানবন্দর',23.8520,90.4000], kak:['কাকলী',23.7960,90.4005], moh:['মহাখালী',23.7782,90.4054], jah:['জাহাঙ্গীর গেট',23.7700,90.3960],
+    bij:['বিজয় সরণি',23.7655,90.3835], mma:['মানিক মিয়া অ্যাভিনিউ',23.7620,90.3795], sci:['সায়েন্স ল্যাব',23.7390,90.3858],
+    nm:['নিউ মার্কেট',23.7338,90.3855], azi:['আজিমপুর (ঢাকেশ্বরী মন্দির)',23.7268,90.3860], tongi:['টঙ্গী কলেজ গেট',23.8940,90.4035],
+    far:['ফার্মগেট',23.7561,90.3872], zoo:['মিরপুর চিড়িয়াখানা',23.8142,90.3434], tech:['টেকনিক্যাল',23.7835,90.3510],
+    shy:['শ্যামলী',23.7747,90.3650], asad:['আসাদ গেট',23.7605,90.3728], kala:['কলাবাগান',23.7465,90.3840], shah:['শাহবাগ',23.7388,90.3956],
+    matsya:['মৎস্য ভবন',23.7358,90.4010], press:['প্রেস ক্লাব',23.7325,90.4085], zero:['জিরো পয়েন্ট',23.7285,90.4118],
+    ful:['ফুলবাড়িয়া',23.7255,90.4130], babu:['বাবুবাজার ব্রিজ',23.7105,90.4035], chunk:['চুনকুটিয়া (কেরানীগঞ্জ)',23.6930,90.3900],
+    gh:['ঘাটারচর (মোহাম্মদপুর)',23.7430,90.3330], jig:['জিগাতলা',23.7385,90.3745], krl:['কাকরাইল',23.7365,90.4095],
+    mou:['মৌচাক',23.7478,90.4098], mal:['মালিবাগ',23.7492,90.4150], ramp:['রামপুরা ব্রিজ',23.7605,90.4235], bana:['বনশ্রী',23.7650,90.4370],
+    demra:['ডেমরা স্টাফ কোয়ার্টার',23.7172,90.4840], kanch:['কাঁচপুর ব্রিজ (চট্টগ্রাম রোড)',23.7120,90.5070],
+    m10:['মিরপুর-১০',23.8069,90.3685], dhour:['ধউর ব্রিজ (আবদুল্লাহপুর)',23.8895,90.3790], m1:['মিরপুর-১',23.7955,90.3535],
+    kakb:['কাকলী–বনানী',23.7970,90.4005]
+  };
+  var CP = {
+    kal:['কালুরঘাট',22.4090,91.8660], bah:['বহদ্দারহাট',22.3708,91.8428], chowk:['চকবাজার',22.3555,91.8380], lal:['লালখান বাজার',22.3615,91.8240],
+    dew:['দেওয়ানহাট',22.3430,91.8290], pat:['পতেঙ্গা সী বিচ',22.2370,91.7889], gec:['জিইসি মোড়',22.3593,91.8217], tig:['টাইগারপাস',22.3326,91.8232],
+    agr:['আগ্রাবাদ',22.3226,91.8123], kat:['কাটগড়',22.2850,91.7950], oxy:['অক্সিজেন',22.3860,91.8120], mur:['মুরাদপুর',22.3700,91.8340],
+    g2:['২ নম্বর গেট',22.3623,91.8360], cus:['কাস্টম মোড়',22.3190,91.8100], epz:['ইপিজেড',22.2870,91.8010], nm:['নিউমার্কেট',22.3419,91.8315],
+    alk:['অলংকার মোড়',22.3640,91.8130], akk:['এ কে খান মোড়',22.3930,91.8010], bha:['ভাটিয়ারী',22.4300,91.7800]
+  };
+
+  var CITY = {
+    dhaka:{
+      n:'ঢাকা', P:DP, areas:DHAKA_AREAS, defArea:'dhanmondi',
+      note:'ঢাকার তালিকা ১ নভেম্বর ২০২৬ থেকে চালু হওয়া সাতটি রুটের। অন্য রুট ধাপে ধাপে নতুন কাঠামোয় আসছে, তাই সেগুলো এখানে নেই। সূত্রগুলোয় কিছু রুটের মাঝের স্টপ বা কোম্পানির নামে অমিল আছে, ফলে চিহ্নিত রুটের স্টপ তালিকা অসম্পূর্ণ।',
+      routes:[
+        {n:'শিববাড়ী – আজিমপুর', no:'রুট ৪', co:'ভিআইপি সিটি পরিবহন', buses:253, km:43, full:true,
+         s:['shib','abd','utt','air','kak','moh','jah','bij','mma','sci','nm','azi']},
+        {n:'টঙ্গী – আজিমপুর (এসি, এক্সপ্রেসওয়ে হয়ে)', co:'ঢাকা সিটি পরিবহন (সূত্রভেদে ‘ঢাকা চাকা’)', buses:20, full:false,
+         s:['tongi','abd','air','far','mma','sci','azi']},
+        {n:'মিরপুর চিড়িয়াখানা – চুনকুটিয়া', co:'চিড়িয়াখানা সিটি পরিবহন', buses:133, full:true,
+         s:['zoo','tech','shy','asad','kala','sci','shah','matsya','press','zero','ful','babu','chunk']},
+        {n:'ঘাটারচর – ডেমরা স্টাফ কোয়ার্টার', no:'রুট ১৯', co:'রমজান আলী সিটি পরিবহন', buses:80, km:22.3, full:true,
+         s:['gh','sci','shah','matsya','krl','mou','mal','ramp','bana','demra']},
+        {n:'ঘাটারচর – কাঁচপুর (চট্টগ্রাম রোড)', co:'থ্রি স্টার সিটি পরিবহন', buses:120, full:false, s:['gh','jig','sci','kanch']},
+        {n:'ঘাটারচর – ধউর (আবদুল্লাহপুর)', co:'পি.পি.বি. সিটি পরিবহন', buses:225, full:false, s:['gh','m10','dhour']},
+        {n:'মিরপুর-১ – কাকলী–বনানী (বৃত্তাকার)', co:'ট্রাস্ট ট্রান্সপোর্ট সার্ভিস', buses:30, full:false, s:['m1','kakb']}
+      ]
+    },
+    ctg:{
+      n:'চট্টগ্রাম', P:CP, defArea:'gec',
+      areas:[['gec','জিইসি মোড়',22.3593,91.8217],['nm','নিউমার্কেট',22.3419,91.8315],['agr','আগ্রাবাদ',22.3226,91.8123],['kal','কালুরঘাট',22.4090,91.8660],
+             ['bah','বহদ্দারহাট',22.3708,91.8428],['chowk','চকবাজার',22.3555,91.8380],['mur','মুরাদপুর',22.3700,91.8340],['dew','দেওয়ানহাট',22.3430,91.8290],
+             ['tig','টাইগারপাস',22.3326,91.8232],['oxy','অক্সিজেন',22.3860,91.8120],['kat','কাটগড়',22.2850,91.7950],['pat','পতেঙ্গা সী বিচ',22.2370,91.7889]],
+      note:'চট্টগ্রামের পাঁচটি রুট দেশ আমারের জুলাই ২০২৬ সালের নির্দেশিকা থেকে নেওয়া। সেখানে কোনো কোম্পানির নাম নেই। ৪ নম্বর রুটে কিছু বাস ভাটিয়ারী পর্যন্ত যায়। স্টপের অবস্থান আমার অনুমান।',
+      routes:[
+        {n:'রুট ১: কালুরঘাট – পতেঙ্গা', no:'রুট ১', full:true, s:['kal','bah','chowk','lal','dew','pat']},
+        {n:'রুট ২: কালুরঘাট – পতেঙ্গা (আগ্রাবাদ, কাটগড় হয়ে)', no:'রুট ২', full:true, s:['kal','bah','gec','lal','tig','agr','kat','pat']},
+        {n:'রুট ৩: অক্সিজেন – পতেঙ্গা (ইপিজেড হয়ে)', no:'রুট ৩', full:true, s:['oxy','mur','g2','gec','dew','cus','epz','pat']},
+        {n:'রুট ৪: নিউমার্কেট – বহদ্দারহাট', no:'রুট ৪', full:true, s:['nm','tig','gec','g2','mur','bah']},
+        {n:'রুট ১০: কালুরঘাট – ভাটিয়ারী', no:'রুট ১০', full:true, s:['kal','bah','gec','alk','akk','bha']}
+      ]
+    }
+  };
+
+  /* ---------- helpers ---------- */
+  var $ = function(id){return document.getElementById(id)};
+  var bn = function(x){return String(x).replace(/\d/g,function(d){return '০১২৩৪৫৬৭৮৯'[d]})};
+  var money = function(x){return bn(Math.round(x))};
+  var dec = function(x){return bn((Math.round(x*100)/100).toFixed(2))};
+  var one = function(x){var r=Math.round(x*10)/10; return bn(r%1===0?String(r):r.toFixed(1))};
+  function hav(a,b,c,d){
+    var R=6371, p=Math.PI/180, dLa=(c-a)*p, dLo=(d-b)*p;
+    var x=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(a*p)*Math.cos(c*p)*Math.sin(dLo/2)*Math.sin(dLo/2);
+    return 2*R*Math.asin(Math.sqrt(x));
+  }
+  function duration(km, sp){
+    var h=km/sp, hh=Math.floor(h), mm=Math.round((h-hh)*60/5)*5;
+    if(mm===60){hh+=1; mm=0}
+    if(hh===0 && mm===0) mm=5;
+    return hh>0 ? (bn(hh)+' ঘণ্টা'+(mm?(' '+bn(mm)+' মিনিট'):'')) : (bn(mm)+' মিনিট');
+  }
+  function distText(km){
+    return km<1 ? (bn(Math.max(10,Math.round(km*100)*10))+' মিটার') : (one(km)+' কিমি');
+  }
+  function curDest(){return DEST.filter(function(d){return d.id===S.dest})[0]}
+  function kmOf(d){return (S.km && S.km>0) ? S.km : d.km}
+  function fareOf(km){
+    if(S.type==='std'){var f=Math.round(km*S.rate); return {lo:f,hi:f,mid:f}}
+    var m=km*S.ac; return {lo:Math.round(m*0.85), hi:Math.round(m*1.15), mid:Math.round(m)};
+  }
+  function isCity(){return S.mode!=='inter'}
+
+  /* precompute cumulative distances along each city route */
+  Object.keys(CITY).forEach(function(c){
+    CITY[c].routes.forEach(function(r){
+      r.stops=r.s.map(function(k){var p=CITY[c].P[k]; return {n:p[0], lat:p[1], lng:p[2]}});
+      var cum=[0], raw=0, i;
+      for(i=1;i<r.stops.length;i++){ raw+=hav(r.stops[i-1].lat,r.stops[i-1].lng,r.stops[i].lat,r.stops[i].lng); cum.push(raw); }
+      var f = r.km ? r.km/raw : 1.2;
+      r.cum=cum.map(function(x){return x*f});
+      r.total=r.cum[r.cum.length-1];
+      r.official=!!r.km;
+    });
+  });
+  function cityNow(){return CITY[S.mode]}
+  function routeNow(){return cityNow().routes[S.route[S.mode]]}
+  function ftNow(){
+    var r=routeNow(), key=S.mode+':'+S.route[S.mode];
+    if(!S.ft[key]) S.ft[key]={f:0, t:r.stops.length-1};
+    return S.ft[key];
+  }
+  function cityFare(km){
+    var raw=km*S.crate;
+    return {est:Math.max(S.cmin,Math.round(raw)), lo:Math.max(S.cmin,Math.round(raw*0.8)), hi:Math.max(S.cmin,Math.round(raw*1.2))};
+  }
+
+  /* ---------- static control fill ---------- */
+  var areaSel=$('area'), destSel=$('dest'), routeSel=$('route'), fromSel=$('from'), toSel=$('to');
+  destSel.innerHTML = DEST.map(function(d){return '<option value="'+d.id+'">'+d.n+'</option>'}).join('');
+  destSel.value=S.dest;
+  $('rateIn').value=S.rate; $('acIn').value=S.ac; $('spIn').value=S.speed;
+  $('crateIn').value=S.crate; $('cminIn').value=S.cmin; $('cspIn').value=S.cspeed;
+
+  function areaList(){ return isCity() ? cityNow().areas : DHAKA_AREAS; }
+  function fillAreas(selId){
+    var L=areaList();
+    areaSel.innerHTML = L.map(function(a){return '<option value="'+a[0]+'">'+a[1]+'</option>'}).join('');
+    areaSel.value = selId;
+  }
+  function setUserFromArea(id){
+    var a=areaList().filter(function(x){return x[0]===id})[0] || areaList()[0];
+    S.user={lat:a[2], lng:a[3], label:a[1], real:false, areaId:a[0]};
+    areaSel.value=a[0];
+  }
+  function fillRoutes(){
+    var C=cityNow();
+    routeSel.innerHTML = C.routes.map(function(r,i){return '<option value="'+i+'">'+r.n+'</option>'}).join('');
+    routeSel.value=S.route[S.mode];
+  }
+  function fillStops(){
+    var r=routeNow(), ft=ftNow();
+    var opts=r.stops.map(function(s,i){return '<option value="'+i+'">'+s.n+'</option>'}).join('');
+    fromSel.innerHTML=opts; toSel.innerHTML=opts;
+    fromSel.value=ft.f; toSel.value=ft.t;
+  }
+
+  /* ---------- mode switch ---------- */
+  function setMode(m){
+    if(S.mode===m) return;
+    S.mode=m; S.km=null; S.ckm=null; $('kmIn').value=''; $('ckmIn').value='';
+    var city=isCity();
+    $('mInter').setAttribute('aria-pressed', m==='inter');
+    $('mDhaka').setAttribute('aria-pressed', m==='dhaka');
+    $('mCtg').setAttribute('aria-pressed', m==='ctg');
+    $('cardInter').hidden=city; $('cardCity').hidden=!city;
+    $('secTerm').hidden=city; $('secStops').hidden=!city;
+    $('secAll').hidden=city; $('secDir').hidden=!city;
+    $('notesInter').hidden=city; $('notesCity').hidden=!city;
+    var keepReal = S.user && S.user.real;
+    var defId = city ? cityNow().defArea : 'dhanmondi';
+    fillAreas(keepReal ? '' : defId);
+    if(!keepReal){
+      setUserFromArea(defId);
+      $('locMsg').className='msg';
+      $('locMsg').textContent='নমুনা হিসেবে '+S.user.label+' বাছা আছে। লোকেশন চালু করলে আপনার আসল অবস্থান ধরা হবে।';
+    } else {
+      areaSel.selectedIndex=-1;
+    }
+    if(city){ fillRoutes(); fillStops(); $('cityNoteSpecific').textContent=cityNow().note; }
+    render();
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    $('h-map').textContent = isCity() ? 'রুটের মানচিত্র' : 'টার্মিনালের অবস্থান';
+    if(isCity()) renderCity(); else renderInter();
+    checkPaid();
+  }
+
+  function renderInter(){
+    var d=curDest(), km=kmOf(d), f=fareOf(km), u=S.user;
+    var ranked = d.t.map(function(k){
+      var air=hav(u.lat,u.lng,T[k].lat,T[k].lng);
+      return {k:k, air:air, road:air*1.3};
+    }).sort(function(a,b){return a.air-b.air});
+    var near=ranked[0];
+    var isStd=S.type==='std';
+    S.cur = isStd ? {kind:'std', est:f.mid} : {kind:'ac', lo:f.lo, hi:f.hi};
+
+    var fareHtml = isStd
+      ? '<div class="fare"><small>৳</small>'+money(f.mid)+'</div>'
+      : '<div class="fare"><small>৳</small>'+money(f.lo)+'–'+money(f.hi)+'</div>';
+    var calcHtml = isStd
+      ? one(km)+' কিমি × ৳'+dec(S.rate)+' = ৳'+money(km*S.rate)
+      : one(km)+' কিমি × ৳'+dec(S.ac)+' ≈ ৳'+money(f.mid)+' (±১৫%)';
+    var kmTag = (S.km && S.km>0) ? '<span class="tag">কিমি আপনার দেওয়া</span>' : '';
+
+    $('ticket').innerHTML =
+      '<div class="t-top">'+
+        '<div class="t-route"><span>'+T[near.k].n+'</span><span class="arr" aria-hidden="true">→</span><span>'+d.n+'</span></div>'+
+        '<div class="t-sub">'+(isStd?'সাধারণ বাস · সরকারি হার':'এসি / কোচ · আনুমানিক বাজারদর')+' '+kmTag+'</div>'+
+      '</div>'+
+      '<div class="perf" aria-hidden="true"></div>'+
+      '<div class="t-bot">'+
+        '<div>'+fareHtml+'<div class="calc">'+calcHtml+'</div></div>'+
+        '<div class="facts">'+
+          '<div class="fact"><b>'+one(km)+' কিমি</b><span>সড়ক দূরত্ব (আনুমানিক)</span></div>'+
+          '<div class="fact"><b>'+duration(km,S.speed)+'</b><span>গড় গতি '+bn(Math.round(S.speed))+' কিমি/ঘণ্টা</span></div>'+
+          '<div class="fact"><b>'+one(near.road)+' কিমি</b><span>'+u.label+' থেকে '+T[near.k].n+'</span></div>'+
+        '</div>'+
+      '</div>';
+
+    $('tlist').innerHTML = ranked.map(function(r,i){
+      return '<li class="'+(i===0?'near':'')+'"><div><div class="nm">'+T[r.k].n+(i===0?' · নিকটতম':'')+'</div><div class="ar">'+T[r.k].area+'</div></div>'+
+             '<div class="dk">'+one(r.road)+' কিমি<small>সড়কপথে আনুমানিক</small></div></li>';
+    }).join('');
+
+    if(d.ops){
+      $('ops').innerHTML=d.ops.map(function(o){return '<li>'+o+'</li>'}).join('');
+      $('opsNote').textContent='তালিকা সূচক মাত্র। সব কোম্পানি সব টার্মিনাল থেকে ছাড়ে না।';
+    } else {
+      $('ops').innerHTML='';
+      $('opsNote').textContent='এই রুটের কোম্পানির তালিকা যাচাই করা হয়নি। টার্মিনালের কাউন্টারে জেনে নিন।';
+    }
+
+    $('legend').innerHTML='<span><i style="background:var(--brand)"></i>এই রুটের টার্মিনাল</span><span><i style="background:var(--muted)"></i>অন্য টার্মিনাল</span><span><i style="background:var(--signal);border-radius:50%"></i>আপনি</span>';
+    drawMap(d, near);
+    drawTable();
+  }
+
+  function nearestStopIdx(r, u){
+    var best=0, bd=1e9, i, dd;
+    for(i=0;i<r.stops.length;i++){ dd=hav(u.lat,u.lng,r.stops[i].lat,r.stops[i].lng); if(dd<bd){bd=dd; best=i;} }
+    return {i:best, d:bd};
+  }
+
+  function renderCity(){
+    var C=cityNow(), r=routeNow(), ft=ftNow(), u=S.user;
+    var near=nearestStopIdx(r,u), far=near.d>25;
+    var auto=Math.abs(r.cum[ft.t]-r.cum[ft.f]);
+    var custom = S.ckm && S.ckm>0;
+    var dist = custom ? S.ckm : auto;
+    var cf = cityFare(dist);
+    var same = (ft.f===ft.t) && !custom;
+    S.cur = {kind:'city', est:cf.est, lo:cf.lo, hi:cf.hi, exact:custom, none:same};
+
+    var msg=$('tripMsg');
+    if(ft.f===ft.t){ msg.className='msg warn'; msg.textContent='উঠা ও নামার স্টপ একই। ভিন্ন স্টপ বেছে নিন।'; }
+    else { msg.className='msg'; msg.textContent=''; }
+
+    var fareHtml, calcHtml;
+    if(same){
+      fareHtml='<div class="fare"><small>৳</small>—</div>'; calcHtml='ভিন্ন দুটি স্টপ বেছে নিন।';
+    } else if(custom){
+      fareHtml='<div class="fare"><small>৳</small>'+money(cf.est)+'</div>';
+      calcHtml=one(dist)+' কিমি × ৳'+dec(S.crate)+' = ৳'+money(dist*S.crate)+(cf.est===S.cmin && dist*S.crate<S.cmin ? ' (ন্যূনতম ৳'+money(S.cmin)+')' : '');
+    } else {
+      fareHtml='<div class="fare"><small>৳</small>'+money(cf.lo)+'–'+money(cf.hi)+'</div>';
+      calcHtml='আনুমানিক '+one(dist)+' কিমি × ৳'+dec(S.crate)+' ≈ ৳'+money(cf.est)+' (±২০%, ন্যূনতম ৳'+money(S.cmin)+')';
+    }
+    var tag = custom ? '<span class="tag">কিমি আপনার দেওয়া</span>' : (r.official ? '<span class="tag">রুটের দৈর্ঘ্য সরকারি সূত্রে</span>' : '<span class="tag">আনুমানিক</span>');
+    var nearTxt = far ? 'এই শহর থেকে অনেক দূরে' : (distText(near.d)+' · '+r.stops[near.i].n);
+
+    $('ticket').innerHTML =
+      '<div class="t-top">'+
+        '<div class="t-route"><span>'+r.stops[ft.f].n+'</span><span class="arr" aria-hidden="true">→</span><span>'+r.stops[ft.t].n+'</span></div>'+
+        '<div class="t-sub">'+C.n+' শহর · '+r.n+' '+tag+'</div>'+
+      '</div>'+
+      '<div class="perf" aria-hidden="true"></div>'+
+      '<div class="t-bot">'+
+        '<div>'+fareHtml+'<div class="calc">'+calcHtml+'</div></div>'+
+        '<div class="facts">'+
+          '<div class="fact"><b>'+(same?'—':one(dist)+' কিমি')+'</b><span>উঠা থেকে নামার দূরত্ব</span></div>'+
+          '<div class="fact"><b>'+(same?'—':duration(dist,S.cspeed))+'</b><span>গড় গতি '+bn(Math.round(S.cspeed))+' কিমি/ঘণ্টা</span></div>'+
+          '<div class="fact"><b>'+(far?'—':distText(near.d))+'</b><span>'+(far?'আপনি রুট থেকে দূরে':('নিকটতম স্টপ: '+r.stops[near.i].n))+'</span></div>'+
+        '</div>'+
+      '</div>';
+
+    var chips=[];
+    if(r.co) chips.push(r.co);
+    if(r.buses) chips.push(bn(r.buses)+'টি বাস');
+    if(r.no) chips.push(r.no);
+    chips.push(r.full ? 'স্টপ তালিকা প্রায় পূর্ণ' : 'মাঝের স্টপ অসম্পূর্ণ');
+    $('cityOps').innerHTML=chips.map(function(c){return '<li>'+c+'</li>'}).join('');
+    $('routeNote').textContent = r.co ? 'কোম্পানি ও বাসের সংখ্যা সংবাদসূত্র থেকে।' : 'এই রুটের কোম্পানির নাম সূত্রে নেই।';
+
+    $('slist').innerHTML = r.stops.map(function(s,i){
+      var d=Math.abs(r.cum[i]-r.cum[ft.f]);
+      var cls=[]; if(i===near.i && !far) cls.push('near'); if(i===ft.f||i===ft.t) cls.push('on');
+      var badges='';
+      if(i===ft.f) badges+='<span class="bd alt">উঠবেন</span>';
+      if(i===ft.t && ft.t!==ft.f) badges+='<span class="bd alt">নামবেন</span>';
+      if(i===near.i && !far) badges+='<span class="bd">আপনার কাছে</span>';
+      return '<li class="'+cls.join(' ')+'"><div><div class="nm">'+s.n+badges+'</div></div><div class="dk">'+(i===ft.f?'শুরু':one(d)+' কিমি')+'</div></li>';
+    }).join('');
+    $('nearBtn').hidden = far;
+    $('nearBtn').setAttribute('data-i', near.i);
+
+    $('legend').innerHTML='<span><i style="background:var(--brand)"></i>রুট</span><span><i style="background:var(--ink)"></i>উঠা ও নামার স্টপ</span><span><i style="background:var(--signal);border-radius:50%"></i>আপনি</span>';
+    drawCityMap(r, ft, near, far);
+    drawDir();
+  }
+
+  /* ---------- maps ---------- */
+  function proj(lat,lng){ return [ (lng-90.33)/0.19*330, (23.90-lat)/0.21*400 ]; }
+  function drawMap(d, near){
+    var u=S.user, out=false, svg='', g;
+    for(g=1; g<5; g++){
+      svg+='<line class="grid" x1="'+(g*66)+'" y1="0" x2="'+(g*66)+'" y2="400"/><line class="grid" x1="0" y1="'+(g*80)+'" x2="330" y2="'+(g*80)+'"/>';
+    }
+    svg+='<text class="dim" x="322" y="14" text-anchor="end">উত্তর ↑</text>';
+    var up=proj(u.lat,u.lng), ux=up[0], uy=up[1];
+    if(ux<10||ux>320||uy<10||uy>390){out=true; ux=Math.min(320,Math.max(10,ux)); uy=Math.min(390,Math.max(10,uy));}
+    var np=proj(T[near.k].lat,T[near.k].lng);
+    svg+='<line x1="'+ux+'" y1="'+uy+'" x2="'+np[0]+'" y2="'+np[1]+'" stroke="var(--signal)" stroke-width="2" stroke-dasharray="5 4"/>';
+    Object.keys(T).forEach(function(k){
+      var t=T[k], p=proj(t.lat,t.lng), on=d.t.indexOf(k)>-1, isN=(k===near.k);
+      svg+='<rect x="'+(p[0]-5)+'" y="'+(p[1]-5)+'" width="10" height="10" rx="2" fill="'+(on?'var(--brand)':'var(--muted)')+'"/>';
+      if(isN) svg+='<rect x="'+(p[0]-9)+'" y="'+(p[1]-9)+'" width="18" height="18" rx="4" fill="none" stroke="var(--brand)" stroke-width="2"/>';
+      svg+='<text x="'+(p[0]+t.lx)+'" y="'+(p[1]+t.ly)+'" text-anchor="'+t.a+'"'+(on?' style="font-weight:600"':' class="dim"')+'>'+t.n+'</text>';
+    });
+    svg+='<circle cx="'+ux+'" cy="'+uy+'" r="7" fill="var(--signal)" stroke="var(--surface)" stroke-width="2"/>';
+    svg+='<text x="'+(ux>230?ux-11:ux+11)+'" y="'+(uy+4)+'" text-anchor="'+(ux>230?'end':'start')+'" style="font-weight:600">আপনি</text>';
+    if(out) svg+='<text class="dim" x="8" y="392">আপনার অবস্থান ঢাকার বাইরে</text>';
+    $('map').innerHTML=svg;
+  }
+
+  function fitMap(P){
+    var lat0=P.reduce(function(a,p){return a+p[0]},0)/P.length, k=Math.cos(lat0*Math.PI/180);
+    var xs=P.map(function(p){return p[1]*k}), ys=P.map(function(p){return -p[0]});
+    var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
+    var W=330, H=400, pad=40;
+    var sc=Math.min((W-2*pad)/Math.max(maxX-minX,1e-5),(H-2*pad)/Math.max(maxY-minY,1e-5));
+    var ox=(W-(maxX-minX)*sc)/2, oy=(H-(maxY-minY)*sc)/2;
+    return function(lat,lng){ return [ox+(lng*k-minX)*sc, oy+(-lat-minY)*sc]; };
+  }
+
+  function drawCityMap(r, ft, near, far){
+    var u=S.user, pts=r.stops.map(function(s){return [s.lat,s.lng]});
+    if(!far) pts.push([u.lat,u.lng]);
+    var P=fitMap(pts), svg='', i, lo=Math.min(ft.f,ft.t), hi=Math.max(ft.f,ft.t);
+    var line=r.stops.map(function(s){var p=P(s.lat,s.lng); return p[0].toFixed(1)+','+p[1].toFixed(1)}).join(' ');
+    svg+='<polyline points="'+line+'" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    if(hi>lo){
+      var seg=r.stops.slice(lo,hi+1).map(function(s){var p=P(s.lat,s.lng); return p[0].toFixed(1)+','+p[1].toFixed(1)}).join(' ');
+      svg+='<polyline points="'+seg+'" fill="none" stroke="var(--brand)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>';
+    }
+    var labels={}; labels[0]=1; labels[r.stops.length-1]=1; labels[ft.f]=1; labels[ft.t]=1; if(!far) labels[near.i]=1;
+    var placed=[];
+    for(i=0;i<r.stops.length;i++){
+      var p=P(r.stops[i].lat,r.stops[i].lng), sel=(i===ft.f||i===ft.t);
+      svg+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(sel?6:3.5)+'" fill="'+(sel?'var(--ink)':'var(--surface)')+'" stroke="'+(sel?'var(--surface)':'var(--muted)')+'" stroke-width="2"/>';
+      if(labels[i]){
+        var right = p[0]<190, tx=right?p[0]+10:p[0]-10, ty=p[1]+4, k;
+        for(k=0;k<placed.length;k++){ if(Math.abs(placed[k][1]-ty)<12 && Math.abs(placed[k][0]-tx)<110) ty=placed[k][1]+12; }
+        placed.push([tx,ty]);
+        svg+='<text x="'+tx+'" y="'+ty+'" text-anchor="'+(right?'start':'end')+'"'+(sel?' style="font-weight:600"':' class="dim"')+'>'+r.stops[i].n+'</text>';
+      }
+    }
+    if(!far){
+      var up=P(u.lat,u.lng), ns=r.stops[near.i], np=P(ns.lat,ns.lng);
+      svg+='<line x1="'+up[0]+'" y1="'+up[1]+'" x2="'+np[0]+'" y2="'+np[1]+'" stroke="var(--signal)" stroke-width="2" stroke-dasharray="5 4"/>';
+      svg+='<circle cx="'+up[0]+'" cy="'+up[1]+'" r="7" fill="var(--signal)" stroke="var(--surface)" stroke-width="2"/>';
+      var rr=up[0]<190;
+      svg+='<text x="'+(rr?up[0]+11:up[0]-11)+'" y="'+(up[1]-8)+'" text-anchor="'+(rr?'start':'end')+'" style="font-weight:600">আপনি</text>';
+    } else {
+      svg+='<text class="dim" x="8" y="392">আপনার অবস্থান এই শহরের বাইরে</text>';
+    }
+    $('map').innerHTML=svg;
+  }
+
+  /* ---------- tables ---------- */
+  function drawTable(){
+    $('thFare').textContent = S.type==='std' ? 'ভাড়া (৳)' : 'আনুমানিক (৳)';
+    $('tbody').innerHTML = DEST.map(function(d){
+      var f=fareOf(d.km);
+      var fs = S.type==='std' ? money(f.mid) : money(f.lo)+'–'+money(f.hi);
+      return '<tr class="'+(d.id===S.dest?'on':'')+'"><td><button type="button" data-id="'+d.id+'">'+d.n+'</button></td>'+
+             '<td class="num">'+bn(d.km)+'</td><td class="num">'+fs+'</td><td class="num">'+duration(d.km,S.speed)+'</td></tr>';
+    }).join('');
+  }
+  function drawDir(){
+    var C=cityNow();
+    $('dirBody').innerHTML = C.routes.map(function(r,i){
+      var cf=cityFare(r.total);
+      return '<tr class="'+(i===S.route[S.mode]?'on':'')+'"><td class="wrapc"><button type="button" data-r="'+i+'">'+r.n+'</button>'+
+             (r.co?'<span class="co">'+r.co+(r.buses?' · '+bn(r.buses)+'টি বাস':'')+'</span>':'')+'</td>'+
+             '<td class="num">'+bn(r.stops.length)+'</td><td class="num">'+one(r.total)+'</td><td class="num">'+money(cf.lo)+'–'+money(cf.hi)+'</td></tr>';
+    }).join('');
+  }
+
+  /* ---------- fare check ---------- */
+  function checkPaid(){
+    var v=parseFloat($('paid').value), box=$('verdict'), c=S.cur, html;
+    if(!(v>0) || !c){box.innerHTML=''; return;}
+    v=Math.round(v);
+    if(c.kind==='std' || (c.kind==='city' && c.exact)){
+      var diff=v-c.est;
+      if(diff>5) html='<div class="verdict bad">সরকারি হারের চেয়ে ৳'+money(diff)+' বেশি চাওয়া হয়েছে।<small>সঠিক ভাড়া ৳'+money(c.est)+'। টিকিট রেখে আপত্তি জানান এবং প্রয়োজনে বিআরটিএ-তে অভিযোগ করুন।</small></div>';
+      else if(diff>=-5) html='<div class="verdict good">ভাড়া ঠিক আছে।<small>সরকারি হিসাব ৳'+money(c.est)+'। রাউন্ডিংয়ে ৫ টাকা পর্যন্ত ব্যবধান স্বাভাবিক।</small></div>';
+      else html='<div class="verdict good">সরকারি হারের চেয়ে কম চাওয়া হয়েছে।<small>সরকারি হিসাব ৳'+money(c.est)+'।</small></div>';
+    } else if(c.kind==='city'){
+      if(c.none) html='<div class="verdict">আগে উঠা ও নামার ভিন্ন স্টপ বেছে নিন।</div>';
+      else if(v>c.hi) html='<div class="verdict bad">আমার আনুমানিক সীমার ওপরে চাওয়া হয়েছে।<small>আনুমানিক সীমা ৳'+money(c.lo)+'–'+money(c.hi)+'। বাসে টাঙানো ভাড়ার চার্ট দেখুন। কিমি জানলে সেটিংয়ে বসালে সরাসরি সরকারি হিসাব পাবেন।</small></div>';
+      else if(v>=c.lo) html='<div class="verdict good">আনুমানিক সীমার মধ্যে।<small>সীমা ৳'+money(c.lo)+'–'+money(c.hi)+'। স্টপের দূরত্ব আমার অনুমান, চার্টের সঙ্গে মিলিয়ে নিন।</small></div>';
+      else html='<div class="verdict good">আনুমানিক সীমার চেয়ে কম চাওয়া হয়েছে।<small>সীমা ৳'+money(c.lo)+'–'+money(c.hi)+'।</small></div>';
+    } else {
+      if(v>c.hi) html='<div class="verdict bad">আনুমানিক বাজারদরের উপরে।<small>আনুমানিক সীমা ৳'+money(c.lo)+'–'+money(c.hi)+'। এসির সরকারি হার নেই, তাই কাউন্টারে অন্য কোম্পানির দামের সঙ্গে মিলিয়ে নিন।</small></div>';
+      else html='<div class="verdict good">আনুমানিক বাজারদরের সীমার মধ্যে।<small>সীমা ৳'+money(c.lo)+'–'+money(c.hi)+'।</small></div>';
+    }
+    box.innerHTML=html;
+  }
+
+  /* ---------- events ---------- */
+  $('mInter').addEventListener('click', function(){setMode('inter')});
+  $('mDhaka').addEventListener('click', function(){setMode('dhaka')});
+  $('mCtg').addEventListener('click', function(){setMode('ctg')});
+
+  areaSel.addEventListener('change', function(){
+    setUserFromArea(areaSel.value);
+    $('locMsg').className='msg'; $('locMsg').textContent=S.user.label+' ধরে হিসাব করা হয়েছে।';
+    render();
+  });
+  destSel.addEventListener('change', function(){S.dest=destSel.value; render();});
+  $('tStd').addEventListener('click', function(){setType('std')});
+  $('tAc').addEventListener('click', function(){setType('ac')});
+  function setType(t){
+    S.type=t;
+    $('tStd').setAttribute('aria-pressed', t==='std');
+    $('tAc').setAttribute('aria-pressed', t==='ac');
+    render();
+  }
+  function num(id){var v=parseFloat($(id).value); return v>0?v:null}
+  $('kmIn').addEventListener('input', function(){S.km=num('kmIn'); render();});
+  $('rateIn').addEventListener('input', function(){S.rate=num('rateIn')||DEF.rate; render();});
+  $('acIn').addEventListener('input', function(){S.ac=num('acIn')||DEF.ac; render();});
+  $('spIn').addEventListener('input', function(){S.speed=Math.max(10,num('spIn')||DEF.speed); render();});
+  $('resetBtn').addEventListener('click', function(){
+    S.rate=DEF.rate; S.ac=DEF.ac; S.speed=DEF.speed; S.km=null;
+    $('rateIn').value=S.rate; $('acIn').value=S.ac; $('spIn').value=S.speed; $('kmIn').value='';
+    render();
+  });
+
+  routeSel.addEventListener('change', function(){
+    S.route[S.mode]=parseInt(routeSel.value,10); S.ckm=null; $('ckmIn').value='';
+    fillStops(); render();
+  });
+  fromSel.addEventListener('change', function(){ftNow().f=parseInt(fromSel.value,10); render();});
+  toSel.addEventListener('change', function(){ftNow().t=parseInt(toSel.value,10); render();});
+  $('swap').addEventListener('click', function(){
+    var ft=ftNow(), x=ft.f; ft.f=ft.t; ft.t=x; fromSel.value=ft.f; toSel.value=ft.t; render();
+  });
+  $('nearBtn').addEventListener('click', function(){
+    var ft=ftNow(); ft.f=parseInt($('nearBtn').getAttribute('data-i'),10); fromSel.value=ft.f; render();
+  });
+  $('ckmIn').addEventListener('input', function(){S.ckm=num('ckmIn'); render();});
+  $('crateIn').addEventListener('input', function(){S.crate=num('crateIn')||DEF.crate; render();});
+  $('cminIn').addEventListener('input', function(){S.cmin=num('cminIn')||DEF.cmin; render();});
+  $('cspIn').addEventListener('input', function(){S.cspeed=Math.max(3,num('cspIn')||DEF.cspeed); render();});
+  $('cresetBtn').addEventListener('click', function(){
+    S.crate=DEF.crate; S.cmin=DEF.cmin; S.cspeed=DEF.cspeed; S.ckm=null;
+    $('crateIn').value=S.crate; $('cminIn').value=S.cmin; $('cspIn').value=S.cspeed; $('ckmIn').value='';
+    render();
+  });
+  $('paid').addEventListener('input', checkPaid);
+  $('tbody').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-id]'); if(!b) return;
+    S.dest=b.getAttribute('data-id'); destSel.value=S.dest; render();
+    $('ticket').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+  $('dirBody').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-r]'); if(!b) return;
+    S.route[S.mode]=parseInt(b.getAttribute('data-r'),10); S.ckm=null; $('ckmIn').value='';
+    routeSel.value=S.route[S.mode]; fillStops(); render();
+    $('ticket').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  /* ---------- location ---------- */
+  var locBtn=$('locBtn');
+  function locFail(reason){
+    locBtn.disabled=false;
+    var m=$('locMsg'); m.className='msg warn';
+    m.textContent = reason==='denied'
+      ? 'লোকেশনের অনুমতি দেওয়া হয়নি। উপরের তালিকা থেকে আপনার এলাকা বেছে নিন।'
+      : 'এই পেজে লোকেশন পাওয়া যায়নি। উপরের তালিকা থেকে আপনার এলাকা বেছে নিন।';
+  }
+  locBtn.addEventListener('click', function(){
+    var m=$('locMsg'); m.className='msg'; m.textContent='লোকেশন খোঁজা হচ্ছে…';
+    if(!('geolocation' in navigator)){locFail('na'); return;}
+    locBtn.disabled=true;
+    var done=false;
+    var timer=setTimeout(function(){ if(!done){done=true; locFail('na');} }, 9000);
+    try{
+      navigator.geolocation.getCurrentPosition(function(p){
+        if(done) return; done=true; clearTimeout(timer); locBtn.disabled=false;
+        var lat=p.coords.latitude, lng=p.coords.longitude;
+        S.user={lat:lat, lng:lng, label:'আপনার অবস্থান', real:true};
+        areaSel.selectedIndex=-1;
+        var farAway = Math.min(hav(lat,lng,23.7806,90.4074), hav(lat,lng,22.3475,91.8123))>60;
+        m.className='msg'+(farAway?' warn':'');
+        m.textContent = farAway ? 'আপনার অবস্থান ঢাকা ও চট্টগ্রাম থেকে অনেক দূরে, তাই দূরত্ব বাস্তবের সঙ্গে নাও মিলতে পারে।' : 'আপনার লোকেশন পাওয়া গেছে।';
+        render();
+      }, function(err){
+        if(done) return; done=true; clearTimeout(timer);
+        locFail(err && err.code===1 ? 'denied' : 'na');
+      }, {enableHighAccuracy:true, timeout:8000, maximumAge:60000});
+    }catch(e){ if(!done){done=true; clearTimeout(timer); locFail('na');} }
+  });
+
+  /* ---------- start ---------- */
+  fillAreas('dhanmondi');
+  setUserFromArea('dhanmondi');
+  render();
+})();
+</script>
+
+</body>
+</html>
